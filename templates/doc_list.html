@@ -1,0 +1,461 @@
+{% extends "base.html" %}
+{% load static from staticfiles %}
+
+{%block estilos%}
+    {{block.super}}
+    <link href="{%static 'base/css/plugins/datapicker/datepicker3.css'%}" rel="stylesheet">
+{%endblock%}
+
+
+{% block content %}
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="ibox">
+                <div class="ibox-title bg-gris-azulado"><h3> Busqueda Personalizada</h3></div>
+                <div class="ibox-content">
+                    <form class="form-inline" method="post">
+                        <div class="form-group">
+                            <label for="selectCategoria" class="control-label">Proceso</label>
+                            <select id="selectCategoria" class="form-control" name="account">
+                                    <option value>---------</option>
+                                {% for categoria in lista_categorias%}
+                                    <option value={{categoria.id}}>{{categoria.name}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                          <label for="selectSeccion" class="control-label">Tipo</label>
+                            <select id="selectSeccion" class="form-control" name="account">
+                                <option value>---------</option>
+                            </select>
+                        </div>
+
+                        <label class="control-label">Rango de Fechas</label>
+                        <div class="input-group input-daterange">
+                            <input type="text" id="fecha_inicial" class="form-control">
+                            <span class="input-group-addon">a</span>
+                            <input type="text" id="fecha_final" class="form-control">
+                        </div>
+
+
+                        <button type="button" id="filtrar" class="btn btn-default">Filtrar</button>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-12" id="resultados">
+            <div class="ibox">
+                <div class="ibox-title"><h3>Documentos por Proceso</h3></div>
+                <div class="ibox-content">
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="row">
+                                {% regroup object_list by category as docs_list %}
+                                    {% for category in docs_list %}  
+                                        <div class="col-lg-12">
+                                            <div class="ibox">
+                                                <div class="ibox-title" style="border:none;"><h2> {{ category.grouper}}</h2> </div>
+                                                <div class="ibox-content">
+                                                    {% regroup category.list by section as docs_by_section %}
+                                                        {% for section in docs_by_section %}
+                                                                    
+                                                            <div style="background-color:#f3f6fb;padding: 5px 5px; ">
+                                                                <h3> Tipo: <small>{{ section.grouper}}</small></h3>
+                                                            </div>
+                                                                <table class="table table-hover">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Nombre</th>
+                                                                            <th class="hidden-xs hidden-sm">Descripción</th>
+                                                                            <th>Fecha</th>
+                                                                            {% if user.is_staff %}
+                                                                                <th>Acciones</th>
+                                                                            {% else %}
+                                                                                <th>Descarga</th>
+                                                                            {% endif %}
+                                                                        </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {% for doc in section.list %}
+                                                                            <tr id="{{doc.id}}">
+                                                                                <td class="col-md-2" style ="word-break:break-all;">{{doc.name}}</td>
+                                                                                <td class="col-md-6 hidden-xs hidden-sm" style ="word-break:break-all;">{{doc.description}}</td>
+                                                                                <td class="col-md-2">{{doc.date|date:"SHORT_DATE_FORMAT"}}</td>
+                                                                                <td class="col-md-2">
+                                                                                    {% if doc.uploader.username == user.get_username %}
+                                                                                        <a href="/repository/download_doc/{{doc.id}}/" class="btn btn-xs btn-white"><i class="fa fa-download"> </i> <div class="hidden-xs hidden-sm" style="float:right"> Descargar</div> </a>
+                                                                                        <a class="btn btn-xs btn-white" data-toggle="modal" data-doc-id="{{doc.id}}" data-target="#modalEliminar"><i class="fa fa-trash"></i> <div class="hidden-xs hidden-sm" style="float:right"> Eliminar</div></a>
+                                                                                        <a class="btn btn-xs btn-white" data-toggle="modal" data-doc-id="{{doc.id}}" data-target="#modalEditar"><i class="fa fa-edit"></i> <div class="hidden-xs hidden-sm" style="float:right"> Editar </div></a>
+                                                                                    {% else %}
+                                                                                        <a href="/repository/download_doc/{{doc.id}}/"><i class="fa fa-download fa-2x"></i></a>
+                                                                                    {% endif %}
+                                                                                </td>
+                                                                            </tr>
+                                                                            {% endfor %}
+                                                                        </tbody>
+                                                                </table>  
+                                                        {% endfor %}    
+                                                </div>                
+                                            </div>
+                                        </div>
+                                    {% endfor %}  
+                            </div>        
+                        </div>    
+                    </div>
+                </div>
+            </div>
+        </div>              
+    </div>
+
+    <div class="modal inmodal" id="modalEliminar" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content animated bounceInRight">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h3 class="modal-title">Eliminar Documento</h3>
+                </div>
+                <div class="modal-body text-center">
+                    <h4>Está seguro que desea <strong>Eliminar</strong> este documento?.</h4>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-white" data-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" data-role="eliminarDocumento">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal inmodal" id="modalEditar" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content animated bounceInRight">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h3 class="modal-title">Editar Documento</h3>
+                </div>
+                <div class="modal-body text-center">
+                    <form id="formModal" class="form-horizontal" enctype="multipart/form-data">
+                        <div class="form-group">
+                            <label for="nombre" class="col-sm-2 control-label">Nombre</label>
+                            <div class="col-sm-10">
+                                <input id="nombre" name="name" class="form-control" type="text">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="nombre" class="col-sm-2 control-label">Descripcion</label>
+                            <div class="col-sm-10">
+                                <input name="description" id="descripcion" class="form-control" type="text">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="nombre" class="col-sm-2 control-label">Fecha</label>
+                            <div class="col-sm-10">
+                                <input name="date" id="fecha-modal" class="form-control" type="text">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="nombre" class="col-sm-2 control-label">Archivo</label>
+                            <div class="col-sm-10">
+                                <input name="upload" id="archivo" type="file">
+                            </div>
+                            <div class="col-sm-2" style="margin-top:5px">
+                                <a id="archivo-actual" href="/repository/download_doc/{{doc.id}}/" class="btn btn-info"><i class="fa fa-download"></i> Documento Actual </a>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="nombre" class="col-sm-2 control-label">Proceso</label>
+                            <div class="col-sm-10">
+                                <select name="category" id="selectCategoria2" class="form-control">
+                                    <option value>---------</option>
+                                    {% for categoria in lista_categorias%}
+                                        <option value={{categoria.id}}>{{categoria.name}}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="nombre" class="col-sm-2 control-label">Tipo</label>
+                            <div class="col-sm-10">
+                                <select name="section" id="selectSeccion2" class="form-control"></select>
+                            </div>
+                        </div>     
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-white" data-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" data-role="modificarDocumento">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{%block scripts%}
+{{block.super}}
+<!-- Data picker -->
+<script src="{%static 'base/js/plugins/datapicker/bootstrap-datepicker.js'%}"></script>
+<script src="{%static 'base/js/plugins/momentjs/moment-with-locales.js'%}"></script>
+
+<script type="text/javascript">
+    
+    var hoy= moment();
+    
+    $(document).ready(function(){
+
+        moment.locale("es-CL");
+
+        $('.input-daterange').datepicker({
+            format:'dd-mm-yyyy',
+            keyboardNavigation: false,
+            autoclose: true
+        });
+        $('#fecha-modal').datepicker({
+            format:'dd-mm-yyyy',
+            keyboardNavigation: false,
+            autoclose: true
+        });
+    });
+
+    var buscarSecciones= function(categoria, destino, callback){
+        if(categoria!=""){
+            $.ajax({
+            type: 'GET',
+            url: '/repository/sections/',
+            data: { "categoria":categoria},
+            dataType: 'json',
+            async:false,
+            success: function(data){
+                callback(destino,data);
+            }
+          });
+        }else{
+            callback(destino,{});
+        }
+    };
+
+    var cargarSecciones = function(destino,data){
+        if(emptyness(data)){
+            destino.find('option').remove();
+            destino.prepend("<option value>---------</option>");
+        }else{
+            destino.find('option').remove();
+            $.each(data["secciones"], function( index, value ) {
+                destino.append($("<option />").val(value.id).text(value.name));
+            });
+            destino.prepend("<option value>---------</option>");
+        }
+    };
+
+    var traerDatos = function(criterios){
+        $.ajax({
+            type:'GET',
+            url:'/repository/search/',
+            data: criterios,
+            dataType: 'json',
+            success: function(data){
+                $("#resultados .ibox .ibox-content").empty();
+                $("#resultados .ibox .ibox-title h3").html("Busqueda Personalizada");
+                if({{user.is_staff|yesno:"true,false"}}){
+                    $("#resultados .ibox .ibox-content").append("<table class='table table-hover' id='tabla_resultados'> <thead><tr><th class='col-md-2'>Nombre</th><th class='col-md-4 hidden-xs'>Descripción</th><th class='col-md-2 hidden-xs'>Proceso</th><th class='col-md-2 hidden-xs'>Tipo</th><th class='col-md-1'>Fecha</th><th class='col-md-2'>Acciones</th></tr></thead><tbody></tbody></table>");   
+                }else{
+                    $("#resultados .ibox .ibox-content").append("<table class='table table-hover' id='tabla_resultados'> <thead><tr><th class='col-md-2'>Nombre</th><th class='col-md-4 hidden-xs'>Descripción</th><th class='col-md-2 hidden-xs'>Proceso</th><th class='col-md-2 hidden-xs'>Tipo</th><th class='col-md-1'>Fecha</th><th class='col-md-2'>Descargar</th></tr></thead><tbody></tbody></table>");   
+                }
+                                                                            
+                for(var i=0;i<data.length;i++){
+                    if ({{user.is_staff|yesno:"true,false"}}){
+                        if('{{user.get_username}}'==data[i].uploader){
+                            $('#tabla_resultados tbody').append("<tr id="+data[i].id+"><td class='col-md-2' style ='word-break:break-all;'>"+data[i].name+"</td><td class='col-md-4 hidden-xs' style ='word-break:break-all;'>"+data[i].description+"</td><td class='col-md-2 hidden-xs' style ='word-break:break-all;'>"+data[i].category+"</td><td class='col-md-2 hidden-xs' style ='word-break:break-all;'>"+data[i].section+"</td><td class='col-md-1'>"+moment(data[i].date).format("DD/MM/YYYY")+"</td><td class='col-md-2' style ='word-break:break-all;'> <a href='/repository/download_doc/"+data[i].id+"/' class='btn btn-xs btn-white'><i class='fa fa-download'></i> <div class='hidden-xs hidden-sm' style='float:right'> Descargar</div> </a><a class='btn btn-xs btn-white' data-toggle='modal' data-doc-id="+data[i].id+" data-target='#modalEliminar'><i class='fa fa-trash'></i> <div class='hidden-xs hidden-sm' style='float:right'> Eliminar</div></a><a class='btn btn-xs btn-white' data-toggle='modal' data-doc-id="+data[i].id+" data-target='#modalEditar'><i class='fa fa-edit'></i> <div class='hidden-xs hidden-sm' style='float:right'> Editar </div></a></td></tr>");
+                        }else{
+
+                            $('#tabla_resultados tbody').append("<tr id="+data[i].id+"><td class='col-md-2' style ='word-break:break-all;'>"+data[i].name+"</td><td class='col-md-4 hidden-xs' style ='word-break:break-all;'>"+data[i].description+"</td><td class='col-md-2 hidden-xs' style ='word-break:break-all;'>"+data[i].category+"</td><td class='col-md-2 hidden-xs' style ='word-break:break-all;'>"+data[i].section+"</td><td class='col-md-1'>"+moment(data[i].date).format("DD/MM/YYYY")+"</td><td><a href='/repository/download_doc/"+data[i].id+"/'><i class='fa fa-download fa-2x'></i></a></td></tr>");
+                        }
+
+                    }else{
+                            $('#tabla_resultados tbody').append("<tr id="+data[i].id+"><td class='col-md-2' style ='word-break:break-all;'>"+data[i].name+"</td><td class='col-md-4 hidden-xs' style ='word-break:break-all;'>"+data[i].description+"</td><td class='col-md-2 hidden-xs' style ='word-break:break-all;'>"+data[i].category+"</td><td class='col-md-2 hidden-xs' style ='word-break:break-all;'>"+data[i].section+"</td><td class='col-md-1'>"+moment(data[i].date).format("DD/MM/YYYY")+"</td><td><a href='/repository/download_doc/"+data[i].id+"/'><i class='fa fa-download fa-2x'></i></a></td></tr>");
+                    }
+                }
+            },
+            async:false
+        });
+    };
+
+    var emptyness= function(obj) {
+        for (var x in obj){
+            return false; 
+        }
+        return true;
+    };
+
+    var consultarDocumento = function(id, completeFormDoc){
+        $.ajax({
+            type: 'GET',
+            url: '/repository/'+id,
+            data: {},
+            dataType: 'json',
+            async:false,
+            success: function(data){
+                if (typeof completeFormDoc === 'undefined'){ 
+                    return data;
+                }else{
+                    completeFormDoc(data);
+                    return data;
+                }
+            }
+          });  
+    };
+
+    var completeFormDoc = function(data,nombre,descripcion,fecha,proceso,tipo,archivo){
+        if (typeof nombre === 'undefined' && typeof description=== 'undefined' && typeof fecha === 'undefined' && typeof proceso === 'undefined' && typeof tipo === 'undefined'){ 
+            nombre = $("#modalEditar").find("#nombre");
+            descripcion = $("#modalEditar").find("#descripcion");
+            fecha = $("#modalEditar").find("#fecha-modal");
+            proceso = $("#modalEditar").find("#selectCategoria2");
+            tipo = $("#modalEditar").find("#selectSeccion2");
+            archivo = $("#modalEditar").find("#archivo-actual");
+        }
+        nombre.val(data.data.nombre);
+        descripcion.val(data.data.descripcion);
+        fecha.datepicker('setDate', new Date(data.data.fecha));
+        proceso.val(data.data.proceso);
+        buscarSecciones(data.data.proceso,tipo,cargarSecciones);
+        tipo.val(data.data.tipo);
+        archivo.attr("href","/repository/download_doc/"+data.data.id+"/");
+    };
+
+    //Selecciona Categoria
+    $( "#selectCategoria" ).change(function() {
+        buscarSecciones($( "#selectCategoria" ).val(), $("#selectSeccion"), cargarSecciones);
+    });
+    $( "#selectCategoria2" ).change(function() {
+        buscarSecciones($( "#selectCategoria2" ).val(), $("#selectSeccion2"), cargarSecciones);
+    });
+
+    //Filtrar Resultados
+    $("#filtrar").click(function(){
+        var categoria=$("#selectCategoria").val();
+        var seccion=$("#selectSeccion").val();
+        var fecha_inicial=moment($("#fecha_inicial").val(),"DD-MM-YYYY");
+        var fecha_final=moment($("#fecha_final").val(),"DD-MM-YYYY");
+        if (fecha_final<fecha_inicial){
+            var aux= fecha_final;
+            fecha_final= fecha_inicial;
+            $("#fecha_final").val(fecha_final.format("DD-MM-YYYY"));
+            fecha_inicial= aux;
+            $("#fecha_inicial").val(fecha_inicial.format("DD-MM-YYYY"));
+        }
+        if(fecha_inicial.isValid() && fecha_final.isValid() && seccion!=""){ //fecha inicial valida, fecha final valida, seccion valida
+            traerDatos({"category":categoria,"section":seccion,"fecha_inicial":fecha_inicial.format("DD-MM-YYYY"),"fecha_final":fecha_final.format("DD-MM-YYYY")});
+        }else if(fecha_inicial.isValid() && fecha_final.isValid()==false && seccion!=""){ //fecha inicial valida, fecha final invalida, seccion valida
+            traerDatos({"category":categoria,"section":seccion,"fecha_inicial":fecha_inicial.format("DD-MM-YYYY")});
+        }else if(fecha_inicial.isValid() && fecha_final.isValid() && seccion==""){ //fecha inicial valida,fecha final valida,seccion invalida
+            traerDatos({"category":categoria,"fecha_inicial":fecha_inicial.format("DD-MM-YYYY"),"fecha_final":fecha_final.format("DD-MM-YYYY")});
+        }else if(fecha_inicial.isValid() && fecha_final.isValid()==false &&  seccion==""){ //fecha inicial valida,fecha final invalida,seccion invalida
+            traerDatos({"category":categoria,"fecha_inicial":fecha_inicial.format("DD-MM-YYYY")});
+        }else if(fecha_inicial.isValid()==false && fecha_final.isValid() &&  seccion!=""){ //fecha inicial invalida,fecha final valida,seccion valida
+            traerDatos({"category":categoria,"section":seccion,"fecha_final":fecha_final.format("DD-MM-YYYY")});
+        }else if(fecha_inicial.isValid()==false && fecha_final.isValid()==false &&  seccion!=""){ //fecha inicial invalida,fecha final invalida,seccion valida
+            traerDatos({"category":categoria,"section":seccion});
+        }else if(fecha_inicial.isValid()==false && fecha_final.isValid() && seccion==""){ //fecha inicial invalida,fecha final valida,seccion invalida
+            traerDatos({"category":categoria,"fecha_final":fecha_final.format("DD-MM-YYYY")});
+        }else if(fecha_inicial.isValid()==false && fecha_final.isValid()==false &&  seccion==""){ //fecha inicial invalida,fecha final invalida,seccion invalida
+            traerDatos({"category":categoria});
+        }
+    });
+
+    //Activar Modal Eliminar
+    $('#modalEliminar').on('show.bs.modal', function (event) {
+        var doc_id = $(event.relatedTarget).data('doc-id');
+        fila_eliminar = $(event.relatedTarget).parents("tr[id="+doc_id+"]");
+        $(this).find('[data-role="eliminarDocumento"]').attr('data-doc-id',doc_id);
+    });
+
+    //Activar Modal Editar
+    $("#modalEditar").on('shown.bs.modal', function (event){
+        var doc_id = $(event.relatedTarget).data('doc-id');
+        consultarDocumento(doc_id,completeFormDoc);
+        fila_editar = $(event.relatedTarget).parents("tr[id="+doc_id+"]");
+        $(this).find('[data-role="modificarDocumento"]').attr('data-doc-id',doc_id);
+    });
+
+    //Eliminar Documento
+    $('button[data-role="eliminarDocumento"]').click(function(){
+        var id = $(this).attr('data-doc-id');
+        $.ajax({
+            type: 'DELETE',
+            data: {},
+            url: '/repository/'+id,
+            dataType: 'json',
+            async:false,
+            success:function(respuesta) {
+                fila_eliminar.remove();
+                $(".modal-footer > .btn").prop('disabled', true);
+                $('.modal-dialog').prepend('<div class="alert alert-success fade"\
+                 <p> El documento seleccionado ha sido borrado correctamente.</p>\
+                </div>'
+                );
+                $(".alert").addClass("in");
+                window.setTimeout(function() { 
+                    $(".alert").removeClass("in");
+                    $('#modalEliminar').modal('hide'); 
+                    $(".alert").remove();
+                }, 2000);
+                window.setTimeout(function(){
+                    $(".modal-footer > .btn").prop('disabled', false);
+                },2001);
+            },
+        });
+    });
+
+    //Modificar Documento
+    $('button[data-role="modificarDocumento"]').click(function(){
+        var id = $(this).attr('data-doc-id');
+        var nombre = $("#modalEditar").find("#nombre");
+        var descripcion = $("#modalEditar").find("#descripcion");
+        var fecha = $("#modalEditar").find("#fecha-modal");
+        var proceso = $("#modalEditar").find("#selectCategoria2");
+        var tipo = $("#modalEditar").find("#selectSeccion2");
+        var archivo = $("#modalEditar").find("#archivo");
+        var form = document.getElementById('formModal');
+        var formData = new FormData(form);
+
+        $.ajax({
+            type: 'POST',
+            url: '/repository/'+id,
+            data: formData,
+            contentType: false,
+            processData: false,
+            cache: false,
+            async:false,
+            success:function(respuesta) {
+                fila_editar.find("#texto-comentario").html(respuesta.nuevo_texto);
+                $(".modal-footer > .btn").prop('disabled', true);
+                $('.modal-dialog').prepend('<div class="alert alert-success fade"\
+                 <p> El documento seleccionado ha sido modificado correctamente.</p>\
+                </div>'
+                );
+                $(".alert").addClass("in");
+                window.setTimeout(function() { 
+                    $(".alert").removeClass("in");
+                    $('#modalEditar').modal('hide'); 
+                    $(".alert").remove();
+                }, 2000);
+                window.setTimeout(function(){
+                    $(".modal-footer > .btn").prop('disabled', false);
+                },2001);
+            },
+        });
+    });
+
+    
+
+
+
+
+</script>
+{%endblock%}
